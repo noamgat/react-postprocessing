@@ -1,8 +1,9 @@
 import * as THREE from 'three'
 import React, { useRef, useState, useCallback } from 'react'
-import { EffectComposer, Outline, SelectiveBloom } from '@react-three/postprocessing'
+import { EffectComposer, Outline, SelectiveBloom, SSAO } from '@react-three/postprocessing'
 import { Canvas, useFrame } from 'react-three-fiber'
 import { Sphere, Box } from '@react-three/drei'
+import { BlendFunction } from 'postprocessing'
 
 import { Mesh } from 'three'
 
@@ -29,6 +30,10 @@ export function Selection() {
   const sphere2Ref = useRef<typeof Mesh>()
   const [bloomSelection, setBloomSelection] = useState<React.MutableRefObject<typeof Mesh>[]>([sphere1Ref])
 
+  const [ssaoEnabled, setSsaoEnabled] = useState(true)
+  const blendFunction = ssaoEnabled ? BlendFunction.MULTIPLY : BlendFunction.SKIP
+  console.log('SSAO BlendFunction ' + blendFunction)
+
   const toggleBloom = useCallback((item) => {
     setBloomSelection((state) => toggle(state, item))
   }, [])
@@ -36,7 +41,7 @@ export function Selection() {
   const lightRef = useRef(null)
 
   useFrame(({ clock }) => {
-    lightRef.current!.position.y = Math.sin(clock.getElapsedTime())
+    lightRef.current!.position.y = 3 + Math.sin(clock.getElapsedTime())
   })
 
   return (
@@ -54,17 +59,18 @@ export function Selection() {
         <meshNormalMaterial attach="material" />
       </Box>
 
-      <Sphere args={[0.5, 32, 32]} position={[1, -1, 1]} ref={sphere1Ref} onClick={() => toggleBloom(sphere1Ref)}>
+      <Sphere args={[1, 32, 32]} position={[1, -1, 1]} ref={sphere1Ref} onClick={() => setSsaoEnabled(!ssaoEnabled)}>
         <meshLambertMaterial color="white" />
       </Sphere>
 
-      <Sphere args={[0.5, 32, 32]} position={[-1, -1, 1]} ref={sphere2Ref} onClick={() => toggleBloom(sphere2Ref)}>
+      <Sphere args={[1, 32, 32]} position={[-1, -1, 1]} ref={sphere2Ref} onClick={() => toggleBloom(sphere2Ref)}>
         <meshLambertMaterial color="white" />
       </Sphere>
 
       <EffectComposer>
         <Outline selection={outlineSelection} visibleEdgeColor="blue" edgeStrength={10} pulseSpeed={1} blur={true} />
         <SelectiveBloom lights={[lightRef]} selectionLayer={11} selection={bloomSelection} luminanceThreshold={0.1} />
+        <SSAO blendFunction={blendFunction} samples={80} rings={10} radius={40} intensity={150} />
       </EffectComposer>
     </>
   )
